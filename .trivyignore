@@ -1,0 +1,4 @@
+# build-time only, locked by react-scripts 5; remove after migrating to Vite
+CVE-2026-73650
+CVE-2026-84370
+CVE-2026-76844

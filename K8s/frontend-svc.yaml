@@ -1,0 +1,23 @@
+# ============================================================================
+# Frontend Service — ClusterIP variant
+# Use this when HAProxy is the ingress controller (recommended for KIND/bare-metal).
+# Frontend is only reachable internally via HAProxy.
+# For direct external access, use frontend-svc-loadbalancer.yaml (requires MetalLB or cloud LB).
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: studykaro
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

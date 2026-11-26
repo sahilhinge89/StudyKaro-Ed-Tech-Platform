@@ -1,0 +1,26 @@
+# ============================================================================
+# Frontend Service — LoadBalancer variant
+# Use this when FRONTEND_SERVICE_TYPE=LoadBalancer.
+# Provisions an external cloud load balancer (AWS NLB/ALB, GCP LB, Azure LB, etc.).
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: studykaro
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  # Optional: restrict which IPs can reach the load balancer (cloud-provider dependent)
+  # loadBalancerSourceRanges:
+  #   - 10.0.0.0/8
+  #   - 172.16.0.0/12

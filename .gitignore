@@ -1,0 +1,33 @@
+
+# secrets - never commit
+.env
+.env.*
+!.env.example
+*-secrets.env
+**/Secret.yaml
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production builds
+/build
+/dist
+
+# Environment variables and secrets
+
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS files
+.DS_Store
+backend-secrets.env
+K8s/Secret.yaml

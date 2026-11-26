@@ -1,0 +1,23 @@
+# ============================================================================
+# Resource Quota — StudyKaro
+# Aggregate resource limits for the studykaro namespace
+# ============================================================================
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: studykaro-resource-quota
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+spec:
+  hard:
+    requests.cpu: 4000m
+    requests.memory: 8Gi
+    limits.cpu: 8000m
+    limits.memory: 16Gi
+    pods: 20
+    services: 10
+    persistentvolumeclaims: 5
+    configmaps: 20
+    secrets: 20

@@ -1,0 +1,24 @@
+
+# Kubernetes API version and resource type
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+# PVC identification and namespace
+metadata:
+  name: mongodb-data
+  namespace: studykaro
+  labels:
+    app: mongodb
+
+spec:
+  # Allows one node to mount the volume as read-write
+  accessModes:
+    - ReadWriteOnce
+
+  # Storage class used to dynamically provision the volume
+  storageClassName: standard
+
+  # Requested persistent storage capacity
+  resources:
+    requests:
+      storage: 2Gi

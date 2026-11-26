@@ -1,0 +1,81 @@
+# ============================================================================
+# Network Policies — StudyKaro
+# Enforces ClusterIP-only internal traffic:
+#   * Frontend pod can call backend on port 4000
+#   * Backend pod can call MongoDB on port 27017
+#   * All other ingress to backend/mongodb is denied
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: frontend
+      ports:
+        - protocol: TCP
+          port: 4000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-mongodb
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: backend
+      ports:
+        - protocol: TCP
+          port: 27017
+---
+# Deny all other ingress to backend and mongodb by default
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-other-ingress-backend
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  policyTypes:
+    - Ingress
+  ingress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-other-ingress-mongodb
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+    - Ingress
+  ingress: []

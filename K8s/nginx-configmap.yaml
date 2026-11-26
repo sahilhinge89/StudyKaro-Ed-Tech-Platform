@@ -1,0 +1,76 @@
+# ============================================================================
+# Nginx ConfigMap — StudyKaro Frontend
+# Mounted into the frontend container to override the baked-in default.conf.
+# Uses resolver + variable proxy_pass so DNS resolution happens at request
+# time, preventing crash loops when backend-svc DNS is not yet available
+# at frontend startup.
+# ============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/name: frontend-nginx
+    app.kubernetes.io/part-of: studykaro
+data:
+  default.conf: |
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    server {
+        listen 8080;
+        listen [::]:8080;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Do not advertise the NGINX version.
+        server_tokens off;
+
+        # Container/ingress level liveness signal.
+        location = /healthz {
+            access_log off;
+            add_header Content-Type text/plain;
+            return 200 "ok\n";
+        }
+
+        # API traffic is proxied to the backend Service (same namespace).
+        # resolver + variable proxy_pass => DNS resolved at request time,
+        # not at startup. Prevents crash loops when backend-svc DNS is
+        # not yet available when the frontend pod starts.
+        location /api/ {
+            resolver 127.0.0.11 valid=30s;
+            set $backend http://backend-svc:4000;
+            proxy_pass $backend;
+
+            proxy_http_version 1.1;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Hashed build assets can be cached aggressively, index.html must not be.
+        location /static/ {
+            expires 1y;
+            include /etc/nginx/snippets/security-headers.conf;
+            add_header Cache-Control "public, immutable";
+            try_files $uri =404;
+        }
+
+        # SPA history fallback.
+        location / {
+            try_files $uri $uri/ /index.html;
+            include /etc/nginx/snippets/security-headers.conf;
+            add_header Cache-Control "no-cache";
+        }
+
+        # Security headers applied to every response.
+        include /etc/nginx/snippets/security-headers.conf;
+    }

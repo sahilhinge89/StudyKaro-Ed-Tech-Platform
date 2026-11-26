@@ -1,0 +1,118 @@
+
+# Kubernetes API version and resource type
+apiVersion: apps/v1
+kind: StatefulSet
+
+# StatefulSet identification and namespace
+metadata:
+  name: mongodb
+  namespace: studykaro
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: studykaro
+
+spec:
+  # Headless service associated with the StatefulSet
+  serviceName: mongodb
+
+  # Number of MongoDB replicas
+  replicas: 1
+
+  # Identifies the pods managed by this StatefulSet
+  selector:
+    matchLabels:
+      app: mongodb
+
+  # Pod configuration
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        app.kubernetes.io/part-of: studykaro
+
+    spec:
+      # Grace period before forcefully terminating the pod
+      terminationGracePeriodSeconds: 30
+
+      # Pod-level security settings
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+      # MongoDB container configuration
+      containers:
+        - name: mongodb
+          image: mongo:8
+          imagePullPolicy: IfNotPresent
+
+          # MongoDB listening port
+          ports:
+            - name: mongodb
+              containerPort: 27017
+              protocol: TCP
+
+          # Container-level security settings
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          # MongoDB root credentials from Kubernetes Secret
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: studykaro-backend-secrets
+                  key: MONGO_ROOT_USERNAME
+
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: studykaro-backend-secrets
+                  key: MONGO_ROOT_PASSWORD
+
+          # Mount persistent storage for database files
+          volumeMounts:
+            - name: mongodb-storage
+              mountPath: /data/db
+
+          # Checks whether MongoDB has started successfully
+          startupProbe:
+            tcpSocket:
+              port: mongodb
+            failureThreshold: 30
+            periodSeconds: 10
+
+          # Checks whether MongoDB is ready to accept connections
+          readinessProbe:
+            tcpSocket:
+              port: mongodb
+            periodSeconds: 10
+
+          # Checks whether MongoDB is still running
+          livenessProbe:
+            tcpSocket:
+              port: mongodb
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          # CPU and memory allocation limits
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+
+      # Connects the PVC to the MongoDB container
+      volumes:
+        - name: mongodb-storage
+          persistentVolumeClaim:
+            claimName: mongodb-data

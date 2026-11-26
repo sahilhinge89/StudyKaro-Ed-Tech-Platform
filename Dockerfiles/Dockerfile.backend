@@ -1,0 +1,35 @@
+# ---------- Build context: ./server ----------
+FROM node:22-slim AS deps
+
+WORKDIR /app
+COPY package*.json ./
+
+# bcrypt ships prebuilt binaries for linux/x64 + glibc, so no compiler is required.
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+
+
+# ---------- Runtime stage (non-root, read-only root filesystem friendly) ----------
+FROM node:22-slim AS runtime
+
+ENV NODE_ENV=production \
+    PORT=4000 \
+    NPM_CONFIG_UPDATE_NOTIFIER=false
+
+WORKDIR /app
+
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node . .
+
+# express-fileupload writes temporary uploads to /tmp, which is mounted as an
+# emptyDir volume in Kubernetes so the container filesystem can stay read-only.
+RUN mkdir -p /tmp && chown -R node:node /tmp /app
+
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
+
+USER node
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
+  CMD node -e "require('http').get('http://127.0.0.1:4000/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+STOPSIGNAL SIGTERM
+
+CMD ["node", "index.js"]

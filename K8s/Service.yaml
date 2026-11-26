@@ -1,0 +1,126 @@
+
+# StudyKaro - Kubernetes Services and Ingress
+# Apply: kubectl apply -f K8s/Service.yaml
+
+---
+# Backend Service - Internal access to the backend API
+# Frontend NGINX uses this service name to forward /api/ requests.
+apiVersion: v1
+kind: Service
+metadata:
+  name: studykaro-backend
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: studykaro
+
+spec:
+  # Exposes the backend only inside the Kubernetes cluster
+  type: ClusterIP
+
+  # Routes traffic to backend pods with matching labels
+  selector:
+    app.kubernetes.io/name: backend
+
+  # Backend service port configuration
+  ports:
+    - name: http
+      port: 4000
+      targetPort: http
+      protocol: TCP
+
+---
+
+# Frontend Service - Exposes NGINX frontend through NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: studykaro
+
+spec:
+  type: NodePort
+
+  selector:
+    app.kubernetes.io/name: frontend
+
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+      protocol: TCP
+---
+# Ingress - External HTTP/HTTPS access to the frontend
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: studykaro
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+
+  # NGINX Ingress Controller configuration
+  annotations:
+    # Maximum allowed request body size
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+
+    # Backend response timeout
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+
+    # Client request transmission timeout
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+
+spec:
+  # Specifies the NGINX Ingress Controller
+  ingressClassName: nginx
+
+  # Optional HTTPS configuration
+  # tls:
+  #   - hosts:
+  #       - studykaro.example.com
+  #     secretName: studykaro-tls
+
+  # Host-based routing rules
+  rules:
+    - host: studykaro.example.com  # Replace with your actual domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+
+            # Forward incoming requests to the frontend Service
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http
+
+---
+# MongoDB Headless Service - Network identity for StatefulSet pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: studykaro
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: studykaro
+
+spec:
+  # Disables cluster IP to provide direct pod DNS discovery
+  clusterIP: None
+
+  # Routes traffic to MongoDB pods with matching labels
+  selector:
+    app: mongodb
+
+  # MongoDB database port configuration
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: mongodb
+      protocol: TCP

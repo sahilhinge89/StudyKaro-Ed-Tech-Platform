@@ -1,0 +1,35 @@
+# ============================================================================
+# Limit Range — StudyKaro
+# Default resource requests/limits and constraints for the studykaro namespace
+# ============================================================================
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: studykaro-limit-range
+  namespace: studykaro
+  labels:
+    app.kubernetes.io/part-of: studykaro
+spec:
+  limits:
+    # Default limits for containers that don't specify their own
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 256Mi
+      max:
+        cpu: 2000m
+        memory: 2Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+
+    # Default limits for PVCs
+    - type: PersistentVolumeClaim
+      max:
+        storage: 20Gi
+      min:
+        storage: 1Gi
